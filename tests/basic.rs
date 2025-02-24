@@ -97,11 +97,7 @@ fn test_file() {
         .open(&file_path)
         .unwrap();
 
-    scoped(&mut file, || {
-        g!("Hello");
-        g!();
-        g!("World");
-    });
+    scoped(&mut file, || g(["Hello", "", "World"]));
 
     {
         let content = fs::read_to_string(&file_path).unwrap();
