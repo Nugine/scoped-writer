@@ -3,6 +3,7 @@ use scoped_writer::scoped;
 use scoped_writer::with;
 
 use std::fs;
+use std::hint::black_box;
 use std::io::Read as _;
 use std::io::Seek;
 use std::panic::AssertUnwindSafe;
@@ -109,5 +110,15 @@ fn test_file() {
         file.rewind().unwrap();
         file.read_to_string(&mut content).unwrap();
         assert_eq!(content, "Hello\n\nWorld\n");
+    }
+}
+
+#[test]
+fn test_match_arm() {
+    match black_box(None::<u32>) {
+        Some(x) => {
+            println!("{x}");
+        }
+        None => g!(),
     }
 }
