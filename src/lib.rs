@@ -55,11 +55,11 @@ pub fn with<R>(f: impl FnOnce(&mut dyn io::Write) -> R) -> Option<R> {
 #[macro_export]
 macro_rules! g {
     () => {
-        $crate::with(|w|writeln!(w).unwrap())
+        $crate::with(|w|writeln!(w).unwrap());
     };
-    ($fmt:literal $($arg:tt)*) => {{
-        $crate::with(|w|writeln!(w, $fmt $($arg)*).unwrap())
-    }};
+    ($fmt:literal $($arg:tt)*) => {
+        $crate::with(|w|writeln!(w, $fmt $($arg)*).unwrap());
+    };
 }
 
 /// Writes lines to the global writer.
