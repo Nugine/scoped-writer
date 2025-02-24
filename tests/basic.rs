@@ -1,0 +1,91 @@
+use std::fs;
+use std::io::Read as _;
+use std::io::Seek;
+use std::path::Path;
+
+use scoped_writer::g;
+use scoped_writer::scoped;
+use scoped_writer::with;
+
+#[should_panic(expected = "Reentrancy detected")]
+#[test]
+fn test_reentrancy() {
+    let mut buf = Vec::new();
+
+    scoped(&mut buf, || {
+        with(|w1| {
+            with(|w2| {
+                writeln!(w1, "Hello").unwrap();
+                writeln!(w2, "World").unwrap();
+            })
+        })
+    });
+}
+
+#[test]
+fn test_empty() {
+    let res = with(|w| writeln!(w, "hello"));
+    assert!(res.is_none());
+}
+
+#[test]
+fn test_vec() {
+    let mut buf = Vec::new();
+
+    scoped(&mut buf, || {
+        let x = 42;
+
+        g!("Hello");
+        g!();
+        g!("The answer is {}", x);
+        g!("The answer is {x}");
+        g!("The answer is {num}", num = x);
+    });
+
+    assert_eq!(
+        String::from_utf8(buf).unwrap(),
+        concat!(
+            "Hello\n",
+            "\n",
+            "The answer is 42\n",
+            "The answer is 42\n",
+            "The answer is 42\n"
+        )
+    );
+}
+
+#[test]
+fn test_file() {
+    let root = Path::new(concat!(env!("CARGO_TARGET_TMPDIR"), "/tests_basic"));
+    fs::create_dir_all(root).unwrap();
+
+    let file_path = root.join("file.txt");
+
+    fs::remove_file(&file_path).ok();
+
+    let mut file = fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(&file_path)
+        .unwrap();
+
+    scoped(&mut file, || {
+        g!("Hello");
+        g!();
+        g!("World");
+    });
+
+    {
+        let content = fs::read_to_string(&file_path).unwrap();
+        assert_eq!(content, "Hello\n\nWorld\n");
+    }
+
+    {
+        let mut content = String::new();
+        file.rewind().unwrap();
+        file.read_to_string(&mut content).unwrap();
+        assert_eq!(content, "Hello\n\nWorld\n");
+    }
+}
