@@ -33,7 +33,7 @@ pub fn scoped<R>(mut w: &mut dyn io::Write, f: impl FnOnce() -> R) -> R {
 pub fn with<R>(f: impl FnOnce(&mut dyn io::Write) -> R) -> Option<R> {
     SLOT.with(|slot| {
         let Ok(cur) = slot.try_borrow_mut() else {
-            panic!("Reentrancy detected")
+            panic!("Reentrancy is not allowed in scoped-writer")
         };
         let p = cur.cast::<&mut dyn io::Write>();
         if p.is_null() {

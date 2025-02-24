@@ -1,13 +1,39 @@
-use std::fs;
-use std::io::Read as _;
-use std::io::Seek;
-use std::path::Path;
-
 use scoped_writer::g;
 use scoped_writer::scoped;
 use scoped_writer::with;
 
-#[should_panic(expected = "Reentrancy detected")]
+use std::fs;
+use std::io::Read as _;
+use std::io::Seek;
+use std::panic::AssertUnwindSafe;
+use std::panic::catch_unwind;
+use std::path::Path;
+
+#[test]
+fn test_panic() {
+    let res = with(|w| writeln!(w));
+    assert!(res.is_none());
+
+    let mut buf1 = Vec::new();
+    let mut buf2 = Vec::new();
+
+    let res = catch_unwind(AssertUnwindSafe(|| {
+        scoped(&mut buf1, || {
+            scoped(&mut buf2, || {
+                panic!();
+            });
+        });
+    }));
+
+    assert!(res.is_err());
+    assert!(buf1.is_empty());
+    assert!(buf2.is_empty());
+
+    let res = with(|w| writeln!(w));
+    assert!(res.is_none());
+}
+
+#[should_panic(expected = "Reentrancy is not allowed in scoped-writer")]
 #[test]
 fn test_reentrancy() {
     let mut buf = Vec::new();
