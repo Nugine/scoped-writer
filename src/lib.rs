@@ -3,6 +3,7 @@
 
 use std::cell::RefCell;
 use std::io;
+use std::mem;
 use std::ptr;
 
 type SlotType = *mut dyn io::Write;
@@ -16,7 +17,12 @@ struct SlotGuard(*mut SlotType);
 impl SlotGuard {
     #[must_use]
     fn new(cur: *mut SlotType) -> Self {
-        let prev = SLOT.with(|slot| slot.replace(cur));
+        let prev = SLOT.with(|slot| {
+            let Ok(mut slot) = slot.try_borrow_mut() else {
+                panic!("Reentrancy is not allowed")
+            };
+            mem::replace(&mut *slot, cur)
+        });
         SlotGuard(prev)
     }
 }

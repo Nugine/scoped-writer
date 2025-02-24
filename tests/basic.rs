@@ -35,7 +35,7 @@ fn test_panic() {
 
 #[should_panic(expected = "Reentrancy is not allowed")]
 #[test]
-fn test_reentrancy() {
+fn test_reentrancy_1() {
     let mut buf = Vec::new();
 
     scoped(&mut buf, || {
@@ -43,6 +43,20 @@ fn test_reentrancy() {
             with(|w2| {
                 writeln!(w1, "Hello").unwrap();
                 writeln!(w2, "World").unwrap();
+            })
+        })
+    });
+}
+
+#[should_panic(expected = "Reentrancy is not allowed")]
+#[test]
+fn test_reentrancy_2() {
+    let mut buf = Vec::new();
+
+    scoped(&mut buf, || {
+        with(|w| {
+            scoped(w, || {
+                //
             })
         })
     });
