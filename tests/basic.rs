@@ -6,8 +6,8 @@ use std::fs;
 use std::hint::black_box;
 use std::io::Read as _;
 use std::io::Seek;
-use std::panic::AssertUnwindSafe;
 use std::panic::catch_unwind;
+use std::panic::AssertUnwindSafe;
 use std::path::Path;
 
 #[test]
