@@ -9,14 +9,4 @@ readme = "README.md"
 documentation = "https://docs.rs/scoped-writer"
 categories = ["rust-patterns"]
 keywords = ["scoped", "writer", "utility"]
-
-[lints.rust]
-unsafe_code = "deny"
-
-[lints.clippy]
-# deny
-all = { level = "deny", priority = -1 }
-pedantic = { level = "deny", priority = -1 }
-cargo = { level = "deny", priority = -1 }
-# warn
-dbg_macro = "warn"
+rust-version = "1.65.0"

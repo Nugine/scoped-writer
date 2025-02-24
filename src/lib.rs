@@ -1,3 +1,6 @@
+#![allow(unsafe_code)]
+#![deny(clippy::all, clippy::pedantic, clippy::cargo)]
+
 use std::cell::RefCell;
 use std::io;
 use std::ptr;
@@ -13,20 +16,20 @@ struct SlotGuard(*mut SlotType);
 impl SlotGuard {
     #[must_use]
     fn new(cur: *mut SlotType) -> Self {
-        let prev = SLOT.replace(cur);
+        let prev = SLOT.with(|slot| slot.replace(cur));
         SlotGuard(prev)
     }
 }
 
 impl Drop for SlotGuard {
     fn drop(&mut self) {
-        SLOT.set(self.0);
+        SLOT.with(|slot| *slot.borrow_mut() = self.0);
     }
 }
 
 /// Sets the global writer for the duration of the closure in current thread.
 pub fn scoped<R>(mut w: &mut dyn io::Write, f: impl FnOnce() -> R) -> R {
-    let _guard = SlotGuard::new((&raw mut w).cast());
+    let _guard = SlotGuard::new(ptr::addr_of_mut!(w).cast());
     f()
 }
 
@@ -36,7 +39,6 @@ pub fn scoped<R>(mut w: &mut dyn io::Write, f: impl FnOnce() -> R) -> R {
 ///
 /// # Panics
 /// Panics if this function is called recursively
-#[allow(unsafe_code)]
 pub fn with<R>(f: impl FnOnce(&mut dyn io::Write) -> R) -> Option<R> {
     SLOT.with(|slot| {
         let Ok(cur) = slot.try_borrow_mut() else {

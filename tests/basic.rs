@@ -3,7 +3,6 @@ use scoped_writer::scoped;
 use scoped_writer::with;
 
 use std::fs;
-use std::hint::black_box;
 use std::io::Read as _;
 use std::io::Seek;
 use std::panic::catch_unwind;
@@ -115,7 +114,7 @@ fn test_file() {
 
 #[test]
 fn test_match_arm() {
-    match black_box(None::<u32>) {
+    match None::<u32> {
         Some(x) => {
             println!("{x}");
         }
