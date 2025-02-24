@@ -24,16 +24,23 @@ impl Drop for SlotGuard {
     }
 }
 
+/// Sets the global writer for the duration of the closure in current thread.
 pub fn scoped<R>(mut w: &mut dyn io::Write, f: impl FnOnce() -> R) -> R {
     let _guard = SlotGuard::new((&raw mut w).cast());
     f()
 }
 
-#[allow(clippy::missing_panics_doc)]
+/// Executes a closure with the global writer, skips if the writer is not set.
+///
+/// Reentrancy is not allowed.
+///
+/// # Panics
+/// Panics if this function is called recursively
+#[allow(unsafe_code)]
 pub fn with<R>(f: impl FnOnce(&mut dyn io::Write) -> R) -> Option<R> {
     SLOT.with(|slot| {
         let Ok(cur) = slot.try_borrow_mut() else {
-            panic!("Reentrancy is not allowed in scoped-writer")
+            panic!("Reentrancy is not allowed")
         };
         let p = cur.cast::<&mut dyn io::Write>();
         if p.is_null() {
@@ -44,6 +51,7 @@ pub fn with<R>(f: impl FnOnce(&mut dyn io::Write) -> R) -> Option<R> {
     })
 }
 
+/// [`writeln!`] to the global writer.
 #[macro_export]
 macro_rules! g {
     () => {

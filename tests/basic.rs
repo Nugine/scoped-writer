@@ -33,7 +33,7 @@ fn test_panic() {
     assert!(res.is_none());
 }
 
-#[should_panic(expected = "Reentrancy is not allowed in scoped-writer")]
+#[should_panic(expected = "Reentrancy is not allowed")]
 #[test]
 fn test_reentrancy() {
     let mut buf = Vec::new();

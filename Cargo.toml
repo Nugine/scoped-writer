@@ -11,7 +11,7 @@ categories = ["rust-patterns"]
 keywords = ["scoped", "writer", "utility"]
 
 [lints.rust]
-unsafe_code = "allow"
+unsafe_code = "deny"
 
 [lints.clippy]
 # deny
@@ -20,5 +20,3 @@ pedantic = { level = "deny", priority = -1 }
 cargo = { level = "deny", priority = -1 }
 # warn
 dbg_macro = "warn"
-
-[dependencies]
