@@ -1,41 +1,33 @@
 #![allow(unsafe_code)]
 #![deny(clippy::all, clippy::pedantic, clippy::cargo)]
 
-use std::cell::RefCell;
-use std::io;
-use std::mem;
-use std::ptr;
+mod mut_cell;
+use self::mut_cell::MutCell;
 
-type SlotType = *mut dyn io::Write;
+use std::io::Write;
+use std::mem;
+use std::ptr::NonNull;
+
+type Trait<'a> = dyn Write + 'a;
 
 thread_local! {
-    static SLOT: RefCell<*mut SlotType> = const { RefCell::new(ptr::null_mut()) };
-}
-
-struct SlotGuard(*mut SlotType);
-
-impl SlotGuard {
-    #[must_use]
-    fn new(cur: *mut SlotType) -> Self {
-        let prev = SLOT.with(|slot| {
-            let Ok(mut slot) = slot.try_borrow_mut() else {
-                panic!("Reentrancy is not allowed")
-            };
-            mem::replace(&mut *slot, cur)
-        });
-        SlotGuard(prev)
-    }
-}
-
-impl Drop for SlotGuard {
-    fn drop(&mut self) {
-        SLOT.with(|slot| *slot.borrow_mut() = self.0);
-    }
+    static SLOT: MutCell<Option<NonNull<Trait<'static>>>> = const { MutCell::new(None) };
 }
 
 /// Sets the global writer for the duration of the closure in current thread.
-pub fn scoped<R>(mut w: &mut dyn io::Write, f: impl FnOnce() -> R) -> R {
-    let _guard = SlotGuard::new(ptr::addr_of_mut!(w).cast());
+pub fn scoped<R>(w: &mut dyn Write, f: impl FnOnce() -> R) -> R {
+    struct Guard(Option<NonNull<Trait<'static>>>);
+
+    impl Drop for Guard {
+        fn drop(&mut self) {
+            SLOT.with(|slot| slot.with(|ptr| *ptr = self.0));
+        }
+    }
+
+    let cur: NonNull<Trait<'static>> = unsafe { mem::transmute(NonNull::from(w)) };
+    let prev = SLOT.with(|slot| slot.with(|ptr| ptr.replace(cur)));
+    let _guard = Guard(prev);
+
     f()
 }
 
@@ -44,19 +36,9 @@ pub fn scoped<R>(mut w: &mut dyn io::Write, f: impl FnOnce() -> R) -> R {
 /// Reentrancy is not allowed.
 ///
 /// # Panics
-/// Panics if this function is called recursively
-pub fn with<R>(f: impl FnOnce(&mut dyn io::Write) -> R) -> Option<R> {
-    SLOT.with(|slot| {
-        let Ok(cur) = slot.try_borrow_mut() else {
-            panic!("Reentrancy is not allowed")
-        };
-        let p = cur.cast::<&mut dyn io::Write>();
-        if p.is_null() {
-            None
-        } else {
-            Some(f(unsafe { &mut **p }))
-        }
-    })
+/// Panics if this function is called recursively.
+pub fn with<R>(f: impl FnOnce(&mut dyn Write) -> R) -> Option<R> {
+    SLOT.with(|slot| slot.with(|ptr| (*ptr).map(|mut p| f(unsafe { p.as_mut() }))))
 }
 
 /// [`writeln!`] to the global writer.

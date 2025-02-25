@@ -33,7 +33,7 @@ fn test_panic() {
     assert!(res.is_none());
 }
 
-#[should_panic(expected = "Reentrancy is not allowed")]
+#[should_panic(expected = "reentrancy detected")]
 #[test]
 fn test_reentrancy_1() {
     let mut buf = Vec::new();
@@ -48,7 +48,7 @@ fn test_reentrancy_1() {
     });
 }
 
-#[should_panic(expected = "Reentrancy is not allowed")]
+#[should_panic(expected = "reentrancy detected")]
 #[test]
 fn test_reentrancy_2() {
     let mut buf = Vec::new();
